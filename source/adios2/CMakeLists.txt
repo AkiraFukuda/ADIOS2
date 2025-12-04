@@ -413,9 +413,13 @@ if(ADIOS2_HAVE_MGARD)
   target_sources(adios2_core PRIVATE operator/compress/CompressMGARD.cpp)
   target_sources(adios2_core PRIVATE operator/compress/CompressMGARDComplex.cpp)
 
-  if(ADIOS2_HAVE_MGARD_MDR)
-    target_sources(adios2_core PRIVATE operator/refactor/RefactorMDR.cpp)
-  endif()
+if(ADIOS2_HAVE_MGARD_MDR)
+  target_sources(adios2_core PRIVATE operator/refactor/RefactorMDR.cpp)
+endif()
+
+if(ADIOS2_HAVE_PRODM)
+  target_sources(adios2_core PRIVATE operator/refactor/RefactorProDM.cpp)
+endif()
 
   target_link_libraries(adios2_core PRIVATE mgard::mgard)
 endif()
