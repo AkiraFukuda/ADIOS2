@@ -22,33 +22,33 @@ namespace refactor
 
 class RefactorProDM : public Operator
 {
-
 public:
-    RefactorProDM(const Params &parameters);
-
+    explicit RefactorProDM(const Params &parameters);
     ~RefactorProDM() = default;
 
-    /**
-     * @param dataIn
-     * @param blockStart
-     * @param blockCount
-     * @param type
-     * @param bufferOut
-     * @return size of compressed buffer
-     */
-    size_t Operate(const char *dataIn, const Dims &blockStart, const Dims &blockCount,
-                   const DataType type, char *bufferOut) final;
+    // 注意：签名要和 Operator 的虚函数完全一致，带 const
+    size_t GetEstimatedSize(const size_t ElemCount, const size_t ElemSize,
+                            const size_t ndims,
+                            const size_t *dims) const override;
 
-    /**
-     * @param bufferIn
-     * @param sizeIn
-     * @param dataOut
-     * @return size of decompressed buffer
-     */
-    size_t InverseOperate(const char *bufferIn, const size_t sizeIn, char *dataOut) final;
+    size_t Operate(const char *dataIn, const Dims &blockStart,
+                   const Dims &blockCount, const DataType type,
+                   char *bufferOut) override;
 
-    bool IsDataTypeValid(const DataType type) const final;
+    size_t InverseOperate(const char *bufferIn, const size_t sizeIn,
+                          char *dataOut) override;
 
+    size_t GetHeaderSize() const override;
+
+    bool IsDataTypeValid(const DataType type) const override;
+
+private:
+    // 对应 .cpp 里实现的那个 ReconstructV1
+    size_t ReconstructV1(const char *bufferIn, const size_t sizeIn,
+                         char *dataOut);
+
+    // 对应 .cpp 里用到的 headerSize
+    size_t headerSize = 0;
 };
 
 } // end namespace refactor
@@ -56,3 +56,4 @@ public:
 } // end namespace adios2
 
 #endif /* ADIOS2_OPERATOR_REFACTOR_REFACTORPRODM_H_ */
+

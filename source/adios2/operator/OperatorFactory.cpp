@@ -40,9 +40,9 @@
 #include "adios2/operator/refactor/RefactorMDR.h"
 #endif
 
-#ifdef ADIOS2_HAVE_PRODM
+// #ifdef ADIOS2_HAVE_PRODM
 #include "adios2/operator/refactor/RefactorProDM.h"
-#endif
+// #endif
 
 #ifdef ADIOS2_HAVE_PNG
 #include "adios2/operator/compress/CompressPNG.h"
@@ -182,9 +182,9 @@ std::shared_ptr<Operator> MakeOperator(const std::string &type, const Params &pa
     }
     else if (typeLowerCase == "prodm")
     {
-#ifdef ADIOS2_HAVE_PRODM
+// #ifdef ADIOS2_HAVE_PRODM
         ret = std::make_shared<refactor::RefactorProDM>(parameters);
-#endif
+// #endif
     }
     else if (typeLowerCase == "plugin")
     {

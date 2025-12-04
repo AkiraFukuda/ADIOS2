@@ -20,14 +20,14 @@
 #include <cstring>
 #include <iostream>
 
-#include "ProDM/include/MDR/Refactor/Refactor.hpp"
-#include "ProDM/include/MDR/Reconstructor/Reconstructor.hpp"
+#include "MDR/Refactor/Refactor.hpp"
+#include "MDR/Reconstructor/Reconstructor.hpp"
 
 namespace adios2
 {
 namespace core
 {
-namespace compress
+namespace refactor
 {
 
 namespace
@@ -181,7 +181,7 @@ size_t ProDMReconstructFromBufferImpl(double tolerance,
 //===================== 构造函数 =====================//
 
 RefactorProDM::RefactorProDM(const Params &parameters)
-: Operator("prodm", REFACTOR_PRO_MDR, "refactor", parameters)
+: Operator("prodm", REFACTOR_PRODM, "refactor", parameters)
 {
     // 这里不再需要 mgard_x 的 config，保持空实现即可
 }
@@ -339,8 +339,8 @@ size_t RefactorProDM::ReconstructV1(const char *bufferIn, const size_t sizeIn, c
     const uint8_t verMinor = GetParameter<uint8_t>(bufferIn, bufferInOffset);
     const uint8_t verPatch = GetParameter<uint8_t>(bufferIn, bufferInOffset);
 
-    m_VersionInfo = "Data is compressed using ProDM Version " + std::to_string(verMajor) + "." +
-                    std::to_string(verMinor) + "." + std::to_string(verPatch) + "\n";
+    // m_VersionInfo = "Data is compressed using ProDM Version " + std::to_string(verMajor) + "." +
+    //                 std::to_string(verMinor) + "." + std::to_string(verPatch) + "\n";
 
     const bool isRefactored = GetParameter<bool>(bufferIn, bufferInOffset);
     if (!isRefactored)
@@ -391,6 +391,6 @@ bool RefactorProDM::IsDataTypeValid(const DataType type) const
     return false;
 }
 
-} // end namespace compress
+} // end namespace refactor
 } // end namespace core
 } // end namespace adios2
