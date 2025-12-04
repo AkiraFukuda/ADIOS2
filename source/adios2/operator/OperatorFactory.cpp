@@ -36,13 +36,13 @@
 #include "adios2/operator/compress/CompressMGARDPlus.h"
 #endif
 
-#ifdef ADIOS2_HAVE_MGARD_MDR
+// #ifdef ADIOS2_HAVE_MGARD_MDR
 #include "adios2/operator/refactor/RefactorMDR.h"
-#endif
-
-// #ifdef ADIOS2_HAVE_PRODM
-#include "adios2/operator/refactor/RefactorProDM.h"
 // #endif
+
+#ifdef ADIOS2_HAVE_PRODM
+#include "adios2/operator/refactor/RefactorProDM.h"
+#endif
 
 #ifdef ADIOS2_HAVE_PNG
 #include "adios2/operator/compress/CompressPNG.h"
@@ -197,7 +197,7 @@ std::shared_ptr<Operator> MakeOperator(const std::string &type, const Params &pa
     else
     {
         helper::Throw<std::invalid_argument>("Operator", "OperatorFactory", "MakeOperator",
-                                             "ADIOS2 does not support " + typeLowerCase +
+                                             "ADIOS2 (test) does not support " + typeLowerCase +
                                                  " operation");
     }
 

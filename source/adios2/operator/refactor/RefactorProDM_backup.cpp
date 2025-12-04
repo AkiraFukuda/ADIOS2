@@ -247,7 +247,7 @@ size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
     PutParameter(bufferOut, bufferOutOffset, ProDMVersionPatch);
     // metadata end
 
-    const size_t thresholdSize = 0;
+    const size_t thresholdSize = 100000;
     size_t sizeIn = helper::GetTotalSize(blockCount, helper::GetDataTypeSize(type));
 
     if (sizeIn < thresholdSize)
