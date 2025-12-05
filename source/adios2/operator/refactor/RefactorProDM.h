@@ -26,7 +26,6 @@ public:
     explicit RefactorProDM(const Params &parameters);
     ~RefactorProDM() = default;
 
-    // 注意：签名要和 Operator 的虚函数完全一致，带 const
     size_t GetEstimatedSize(const size_t ElemCount, const size_t ElemSize,
                             const size_t ndims,
                             const size_t *dims) const override;
@@ -43,11 +42,9 @@ public:
     bool IsDataTypeValid(const DataType type) const override;
 
 private:
-    // 对应 .cpp 里实现的那个 ReconstructV1
-    size_t ReconstructV1(const char *bufferIn, const size_t sizeIn,
+    size_t Reconstruct(const char *bufferIn, const size_t sizeIn,
                          char *dataOut);
 
-    // 对应 .cpp 里用到的 headerSize
     size_t headerSize = 0;
 };
 

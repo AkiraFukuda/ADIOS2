@@ -108,16 +108,13 @@ size_t ProDMRefactorToBufferImpl(const char *dataIn, const Dims &blockCount, cha
 
     refactor.negabinary = true;
 
-    uint32_t bufferSize = 0;
     const T *typedIn = reinterpret_cast<const T *>(dataIn);
+    uint8_t *mdrBuffer = reinterpret_cast<uint8_t *>(bufferOut);
 
-    uint8_t *mdrBuffer =
-        refactor.refactor_to_buffer(typedIn, dims32, targetLevel, numBitplanes, bufferSize);
+    uint32_t bufferSize =
+        refactor.refactor_to_buffer(typedIn, dims32, targetLevel, numBitplanes, mdrBuffer);
 
-    std::memcpy(bufferOut, mdrBuffer, bufferSize);
-    std::free(mdrBuffer);
-
-    return static_cast<size_t>(bufferSize);
+    return bufferSize;
 }
 
 template<class T>
@@ -184,21 +181,13 @@ size_t RefactorProDM::GetEstimatedSize(const size_t ElemCount, const size_t Elem
     DataType datatype = (ElemSize == 8 ? DataType::Double : DataType::Float);
 
     Dims dimsV(ndims);
-    for (size_t i = 0; i < ndims; ++i)
-    {
+    for (size_t i = 0; i < ndims; ++i) {
         dimsV[i] = dims[i];
     }
     Dims convertedDims = ConvertDims(dimsV, datatype, 3);
 
     size_t sizeIn = helper::GetTotalSize(convertedDims, ElemSize);
-
-    // upper bound: 2x input + 1KB
-    size_t s = sizeIn * 2 + 1024;
-
-    std::cout << "RefactorProDM Estimated Max output size = " << s
-              << " for input size = " << sizeIn << std::endl;
-
-    return s;
+    return sizeIn * 2 + 1024; // ensure memory space
 }
 
 
@@ -215,7 +204,7 @@ size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
     Dims convertedDims = ConvertDims(blockCount, type, 3);
 
     const size_t ndims = convertedDims.size();
-    if (ndims > 5)
+    if (ndims > 3)
     {
         helper::Throw<std::invalid_argument>(
             "Operator", "RefactorProDM", "Operate",
@@ -329,6 +318,10 @@ size_t RefactorProDM::Reconstruct(const char *bufferIn, const size_t sizeIn, cha
     const bool isRefactored = GetParameter<bool>(bufferIn, bufferInOffset);
     if (!isRefactored)
     {
+        headerSize += bufferInOffset;    
+        m_AccuracyProvided.error = m_AccuracyRequested.error;
+        m_AccuracyProvided.norm = m_AccuracyRequested.norm;
+        m_AccuracyProvided.relative = false;
         return 0;
     }
 

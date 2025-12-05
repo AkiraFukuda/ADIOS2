@@ -196,6 +196,15 @@ if(mgard_FOUND)
  endif()
 endif()
 
+# ProDM
+set(ADIOS2_HAVE_PRODM FALSE)
+if(ADIOS2_USE_PRODM STREQUAL AUTO)
+  if(DEFINED ENV{PRODM_ROOT_DIR})
+    set(PRODM_ROOT_DIR "$ENV{PRODM_ROOT_DIR}")
+    set(ADIOS2_HAVE_PRODM TRUE)
+  endif()
+endif()
+
 # PNG
 if(ADIOS2_USE_PNG STREQUAL AUTO)
   find_package(PNG 1.6.0)
