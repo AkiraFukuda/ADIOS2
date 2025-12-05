@@ -33,12 +33,10 @@ namespace refactor
 namespace
 {
 
-// ProDM 自己的“版本号”（只写到 buffer 里做信息用）
 const uint8_t ProDMVersionMajor = 1;
 const uint8_t ProDMVersionMinor = 0;
 const uint8_t ProDMVersionPatch = 0;
 
-// 打包常用类型
 template<class T>
 struct ProDMTypes
 {
@@ -55,7 +53,6 @@ struct ProDMTypes
     using SizeInterpreter = MDR::SignExcludeGreedyBasedSizeInterpreter<ErrorEstimator>;
 };
 
-// 计算 OrderedMDR 的 target_level（与 OrderedRefactor 里的逻辑保持一致）
 inline uint8_t ProDMComputeTargetLevel(const std::vector<uint32_t> &dims)
 {
     if (dims.empty())
@@ -76,13 +73,12 @@ inline uint8_t ProDMComputeTargetLevel(const std::vector<uint32_t> &dims)
     return static_cast<uint8_t>(maxLevel);
 }
 
-// 实际执行 refactor_to_buffer，并把结果拷贝到 ADIOS2 的 bufferOut
 template<class T>
 size_t ProDMRefactorToBufferImpl(const char *dataIn, const Dims &blockCount, char *bufferOut)
 {
     using Traits = ProDMTypes<T>;
 
-    // 转成 MDR 用的 uint32_t 维度
+    // convert to uint32_t for ProDM
     std::vector<uint32_t> dims32(blockCount.size());
     for (size_t i = 0; i < blockCount.size(); ++i)
     {
@@ -98,7 +94,7 @@ size_t ProDMRefactorToBufferImpl(const char *dataIn, const Dims &blockCount, cha
     typename Traits::Compressor compressor(64);
     typename Traits::ErrorCollector collector;
     typename Traits::ErrorEstimator estimator;
-    typename Traits::Writer writer("", ""); // 不会真正写文件，只是占位
+    typename Traits::Writer writer("", ""); 
 
     MDR::OrderedRefactor<T,
                          typename Traits::Decomposer,
@@ -115,7 +111,6 @@ size_t ProDMRefactorToBufferImpl(const char *dataIn, const Dims &blockCount, cha
     uint32_t bufferSize = 0;
     const T *typedIn = reinterpret_cast<const T *>(dataIn);
 
-    // 调用你在 OrderedRefactor 里添加的 refactor_to_buffer
     uint8_t *mdrBuffer =
         refactor.refactor_to_buffer(typedIn, dims32, targetLevel, numBitplanes, bufferSize);
 
@@ -125,7 +120,6 @@ size_t ProDMRefactorToBufferImpl(const char *dataIn, const Dims &blockCount, cha
     return static_cast<size_t>(bufferSize);
 }
 
-// 实际执行 reconstruct_from_buffer，并把结果写入 dataOut
 template<class T>
 size_t ProDMReconstructFromBufferImpl(double tolerance,
                                        const char *bufferIn,
@@ -154,15 +148,14 @@ size_t ProDMReconstructFromBufferImpl(double tolerance,
 
     const uint8_t *mdrBuffer = reinterpret_cast<const uint8_t *>(bufferIn);
 
-    // 调用你在 OrderedReconstructor 里添加的 reconstruct_from_buffer
     T *reconstructed = reconstructor.reconstruct_from_buffer(tolerance, mdrBuffer);
     if (reconstructed == nullptr)
     {
         helper::Throw<std::runtime_error>("Operator", "RefactorProDM",
-                                          "ReconstructV1", "ProDM reconstruction failed");
+                                          "Reconstruct", "ProDM reconstruction failed");
     }
 
-    // 用 metadata 里记录的维度计算输出大小
+    // get output size
     const std::vector<uint32_t> dims32 = reconstructor.get_dimensions();
     size_t nelem = 1;
     for (auto d : dims32)
@@ -178,15 +171,10 @@ size_t ProDMReconstructFromBufferImpl(double tolerance,
 
 } // end anonymous namespace
 
-//===================== 构造函数 =====================//
 
 RefactorProDM::RefactorProDM(const Params &parameters)
-: Operator("prodm", REFACTOR_PRODM, "refactor", parameters)
-{
-    // 这里不再需要 mgard_x 的 config，保持空实现即可
-}
+: Operator("prodm", REFACTOR_PRODM, "refactor", parameters) {}
 
-//===================== 估算输出大小 =====================//
 
 size_t RefactorProDM::GetEstimatedSize(const size_t ElemCount, const size_t ElemSize,
                                         const size_t ndims, const size_t *dims) const
@@ -204,7 +192,7 @@ size_t RefactorProDM::GetEstimatedSize(const size_t ElemCount, const size_t Elem
 
     size_t sizeIn = helper::GetTotalSize(convertedDims, ElemSize);
 
-    // 粗略的上界：2x input + 1KB，保证不会低估
+    // upper bound: 2x input + 1KB
     size_t s = sizeIn * 2 + 1024;
 
     std::cout << "RefactorProDM Estimated Max output size = " << s
@@ -213,12 +201,11 @@ size_t RefactorProDM::GetEstimatedSize(const size_t ElemCount, const size_t Elem
     return s;
 }
 
-//===================== 压缩：Operate =====================//
 
 size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
                                const Dims &blockCount, const DataType type, char *bufferOut)
 {
-    (void)blockStart; // 未使用，但保持接口一致
+    (void)blockStart; // not used
 
     const uint8_t bufferVersion = 1;
     size_t bufferOutOffset = 0;
@@ -235,7 +222,7 @@ size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
             "ProDM does not support data in " + std::to_string(ndims) + " dimensions");
     }
 
-    // ProDM metadata（和原来 RefactorMDR 的位置完全一样）
+    // metadata
     PutParameter(bufferOut, bufferOutOffset, ndims);
     for (const auto &d : convertedDims)
     {
@@ -247,12 +234,11 @@ size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
     PutParameter(bufferOut, bufferOutOffset, ProDMVersionPatch);
     // metadata end
 
-    const size_t thresholdSize = 0;
+    const size_t thresholdSize = 100000;
     size_t sizeIn = helper::GetTotalSize(blockCount, helper::GetDataTypeSize(type));
 
     if (sizeIn < thresholdSize)
     {
-        // 小块：不做 refactor，在 header 里标记
         PutParameter(bufferOut, bufferOutOffset, false);
         headerSize = bufferOutOffset;
         return 0;
@@ -282,11 +268,10 @@ size_t RefactorProDM::Operate(const char *dataIn, const Dims &blockStart,
     return bufferOutOffset;
 }
 
-//===================== 反压缩入口：InverseOperate =====================//
 
 size_t RefactorProDM::InverseOperate(const char *bufferIn, const size_t sizeIn, char *dataOut)
 {
-    // 从参数里读取 accuracy（与 RefactorMDR 相同风格）
+    // get accuracy parameter
     for (auto &p : m_Parameters)
     {
         std::cout << "User parameter " << p.first << " = " << p.second << std::endl;
@@ -300,14 +285,14 @@ size_t RefactorProDM::InverseOperate(const char *bufferIn, const size_t sizeIn, 
         }
     }
 
-    size_t bufferInOffset = 1; // 跳过 operator type
+    size_t bufferInOffset = 1; // skip operator type
     const uint8_t bufferVersion = GetParameter<uint8_t>(bufferIn, bufferInOffset);
-    bufferInOffset += 2; // 跳过两个 reserved bytes
+    bufferInOffset += 2; // skip 2 reserved bytes
     headerSize = bufferInOffset;
 
     if (bufferVersion == 1)
     {
-        return ReconstructV1(bufferIn + bufferInOffset, sizeIn - bufferInOffset, dataOut);
+        return Reconstruct(bufferIn + bufferInOffset, sizeIn - bufferInOffset, dataOut);
     }
     else
     {
@@ -319,11 +304,10 @@ size_t RefactorProDM::InverseOperate(const char *bufferIn, const size_t sizeIn, 
     return 0;
 }
 
-//===================== 反压缩：ReconstructV1 =====================//
 
-size_t RefactorProDM::ReconstructV1(const char *bufferIn, const size_t sizeIn, char *dataOut)
+size_t RefactorProDM::Reconstruct(const char *bufferIn, const size_t sizeIn, char *dataOut)
 {
-    // 与 RefactorMDR 的 ReconstructV1 格式保持一致：先读 ndims/dims/type/version/wasRefactored
+    // same as RefactorMDR, read ndims/dims/type/version/wasRefactored
     size_t bufferInOffset = 0;
 
     const size_t ndims = GetParameter<size_t, size_t>(bufferIn, bufferInOffset);
@@ -345,13 +329,12 @@ size_t RefactorProDM::ReconstructV1(const char *bufferIn, const size_t sizeIn, c
     const bool isRefactored = GetParameter<bool>(bufferIn, bufferInOffset);
     if (!isRefactored)
     {
-        // 这个块当初没有做 refactor，后续由其他逻辑处理
         return 0;
     }
 
     const char *mdrBuffer = bufferIn + bufferInOffset;
     const size_t mdrSize = sizeIn - bufferInOffset;
-    (void)mdrSize; // 当前 impl 不需要 mdrSize
+    (void)mdrSize;
 
     size_t sizeOut = 0;
     const double tol = m_AccuracyRequested.error;
@@ -366,11 +349,10 @@ size_t RefactorProDM::ReconstructV1(const char *bufferIn, const size_t sizeIn, c
     }
     else
     {
-        helper::Throw<std::invalid_argument>("Operator", "RefactorProDM", "ReconstructV1",
+        helper::Throw<std::invalid_argument>("Operator", "RefactorProDM", "Reconstruct",
                                              "ProDM only supports float and double types");
     }
 
-    // 这里简单地把 “提供的精度” 设为 “请求的精度”
     m_AccuracyProvided.error = m_AccuracyRequested.error;
     m_AccuracyProvided.norm = m_AccuracyRequested.norm;
     m_AccuracyProvided.relative = false;
@@ -378,7 +360,6 @@ size_t RefactorProDM::ReconstructV1(const char *bufferIn, const size_t sizeIn, c
     return sizeOut;
 }
 
-//===================== 头部大小 & 数据类型检查 =====================//
 
 size_t RefactorProDM::GetHeaderSize() const { return headerSize; }
 
