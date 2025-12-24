@@ -196,13 +196,15 @@ if(mgard_FOUND)
  endif()
 endif()
 
-# ProDM
+# PRODM
 set(ADIOS2_HAVE_PRODM FALSE)
 if(ADIOS2_USE_PRODM STREQUAL AUTO)
-  if(DEFINED ENV{PRODM_ROOT_DIR})
-    set(PRODM_ROOT_DIR "$ENV{PRODM_ROOT_DIR}")
-    set(ADIOS2_HAVE_PRODM TRUE)
-  endif()
+  find_package(ProDM CONFIG)
+elseif(ADIOS2_USE_PRODM)
+  find_package(ProDM REQUIRED CONFIG)
+endif()
+if(ProDM_FOUND)
+  set(ADIOS2_HAVE_PRODM TRUE)
 endif()
 
 # PNG

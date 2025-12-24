@@ -421,9 +421,8 @@ if(ADIOS2_HAVE_MGARD)
 endif()
 
 if(ADIOS2_HAVE_PRODM)
-  add_subdirectory(${PRODM_ROOT_DIR} ${CMAKE_BINARY_DIR}/ProDM_build)
   target_sources(adios2_core PRIVATE operator/refactor/RefactorProDM.cpp)
-  target_link_libraries(adios2_core PRIVATE ProDM)
+  target_link_libraries(adios2_core PRIVATE ProDM::ProDM)
 endif()
 
 if(ADIOS2_HAVE_PNG)
